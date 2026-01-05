@@ -1,103 +1,156 @@
 services:
-
   ## ⚙️ Banco de Dados PostgreSQL (Metadata do Airflow)
   postgres:
     image: postgres:13
+    container_name: airflow-postgres
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      # Persiste os dados do PostgreSQL
       - postgres-db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - airflow-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
 
   ## 📦 MinIO (Armazenamento de Objetos - S3-compatible)
   minio:
     image: minio/minio:latest
+    container_name: airflow-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      # Persiste os dados do MinIO
       - minio-data:/data
     ports:
-      # Porta API
-      - "9100:9000"
-      # Porta Console Web
-      - "9101:9001"
+      - "9100:9000"  # API
+      - "9101:9001"  # Console Web
     networks:
       - airflow-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     restart: always
+
+  ## 🔧 Inicializador do Airflow (Roda apenas uma vez)
+  airflow-init:
+    image: apache/airflow:2.7.1
+    container_name: airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    networks:
+      - airflow-net
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Inicializa o banco de dados
+        airflow db init
+        
+        # Cria o usuário admin (user: admin, password: admin)
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin
+        
+        echo "✅ Airflow inicializado com sucesso!"
+    restart: "no"
 
   ## 🌐 Servidor Web do Airflow
   airflow-webserver:
     image: apache/airflow:2.7.1
+    container_name: airflow-webserver
     depends_on:
-      - postgres
-      - minio
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-      # Conexão com o PostgreSQL
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
       AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
-      # Instalação de provedores ou pacotes adicionais
-      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
     volumes:
-      # Mapeamento de DAGs, logs e plugins
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
     ports:
-      - "8081:8080"
+      - "8080:8080"
     command: webserver
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 30s
       retries: 5
+      start_period: 60s
     networks:
       - airflow-net
     restart: always
 
-  ## ⏰ Scheduler do Airflow (Responsável por agendar e disparar DAGs)
+  ## ⏰ Scheduler do Airflow
   airflow-scheduler:
     image: apache/airflow:2.7.1
-    # Deve esperar pelo webserver para garantir que o banco de dados esteja inicializado
+    container_name: airflow-scheduler
     depends_on:
-      - airflow-webserver
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      # Conexão com o PostgreSQL
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
-      # Instalação de provedores ou pacotes adicionais
-      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
     volumes:
-      # Mapeamento de DAGs, logs e plugins (deve ser o mesmo do webserver)
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
     command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - airflow-net
     restart: always
-    
-# ---
 
-## 💾 Definição de Volumes Persistentes
+## 💾 Volumes Persistentes
 volumes:
-  # Volume para os dados do PostgreSQL
   postgres-db:
-  # Volume para os dados do MinIO
+    driver: local
   minio-data:
+    driver: local
 
-## 🔗 Definição da Rede
+## 🔗 Rede
 networks:
   airflow-net:
     driver: bridge

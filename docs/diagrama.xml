@@ -1,0 +1,65 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Olist Airflow Bronze Silver Gold">
+    <mxGraphModel grid="1" gridSize="10">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Source -->
+        <mxCell id="2" value="Olist CSV Dataset&#10;customers | orders | items | payments | reviews"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;"
+          vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="260" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Airflow -->
+        <mxCell id="3" value="Apache Airflow&#10;Orquestração DAGs"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;"
+          vertex="1" parent="1">
+          <mxGeometry x="360" y="160" width="220" height="90" as="geometry"/>
+        </mxCell>
+
+        <!-- Bronze -->
+        <mxCell id="4" value="Bronze Layer&#10;Raw CSV&#10;S3 / MinIO"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;"
+          vertex="1" parent="1">
+          <mxGeometry x="660" y="60" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Silver -->
+        <mxCell id="5" value="Silver Layer&#10;Cleaned Data&#10;Parquet"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;"
+          vertex="1" parent="1">
+          <mxGeometry x="660" y="180" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Gold -->
+        <mxCell id="6" value="Gold Layer&#10;Business Metrics"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;"
+          vertex="1" parent="1">
+          <mxGeometry x="660" y="300" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- BI -->
+        <mxCell id="7" value="BI / Analytics&#10;Power BI | Metabase"
+          style="rounded=1;whiteSpace=wrap;html=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="920" y="300" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Connections -->
+        <mxCell id="8" edge="1" parent="1" source="2" target="3"
+          style="endArrow=classic;html=1;"/>
+        <mxCell id="9" edge="1" parent="1" source="3" target="4"
+          style="endArrow=classic;html=1;"/>
+        <mxCell id="10" edge="1" parent="1" source="4" target="5"
+          style="endArrow=classic;html=1;"/>
+        <mxCell id="11" edge="1" parent="1" source="5" target="6"
+          style="endArrow=classic;html=1;"/>
+        <mxCell id="12" edge="1" parent="1" source="6" target="7"
+          style="endArrow=classic;html=1;"/>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

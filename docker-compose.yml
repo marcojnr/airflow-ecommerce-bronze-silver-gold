@@ -54,7 +54,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
-      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
+      PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -96,7 +96,8 @@ services:
       AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
       AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
-      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
+      # PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-amazon
+      PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -127,7 +128,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'DONT_USE_IN_PROD_CHANGE_ME'
-      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
+      PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon boto3 s3fs'
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
